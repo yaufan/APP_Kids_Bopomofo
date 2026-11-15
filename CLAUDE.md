@@ -67,6 +67,5 @@
 - 測試：`rules_test`、`strokes_test`、`art_test`、`safety_test`、`version_test`、`flow_test`（手機和平板走完全部玩法，截圖在 `app/build/screenshots/`）、`demo/demo_video_test.dart`（`--dart-define=DEMO=true`，再 `python3 tools/demo_audio.py`）。
 
 ## 目前的狀態（2026-11-15）
-- 0.1.0 做好了（本機的 `claude/relaxed-albattani-6mbwpz` 分支）：火車站和地圖、七站 37 個符號、認符號、聽聽找找、寫寫看（看、點、描）、押韻接龍（開頭、押韻）、家裡找找、休息、家長模式（含語音試聽）、音樂和音效、APP 圖示。工作流程、CHANGELOG、README 下載段和 `docs/download-qr.png` 都準備好了。
-- GitHub 專案 2026-11-15 建好了，工作分支已推上去；照 release skill 問能不能推 main（第一次發布前要先在專案加 Secrets）。
+- 0.1.0 已發布（2026-11-15）：Releases 有三個 APK，App 和 Release 都成功；Secrets 加好了（第一次密碼貼錯，重貼後重新執行才成功）。
 - 還沒在真手機上試：**第一件事是用家長模式的「語音試聽」把 37 個同音字聽一遍**（ㄥ 先用「鞥」），念不好的換字（`app/lib/core/voice.dart`）；聲音也還沒用耳朵聽過。筆順有 15 個還沒對照教育部手冊（`docs/bopomofo.md`）。
