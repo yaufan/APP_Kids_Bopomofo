@@ -67,6 +67,5 @@
 - 測試：`rules_test`、`strokes_test`、`art_test`、`safety_test`、`version_test`、`screens_test`（玩的時間、換畫面時的語音、寫寫看快點、家裡找找過午夜）、`flow_test`（手機和平板走完全部玩法，截圖在 `app/build/screenshots/`）、`demo/demo_video_test.dart`（`--dart-define=DEMO=true`，再 `python3 tools/demo_audio.py`）。
 
 ## 目前的狀態（2026-11-15）
-- 0.1.0 已發布（2026-11-15）：Releases 有三個 APK，App 和 Release 都成功；Secrets 加好了（第一次密碼貼錯，重貼後重新執行才成功）。
-- 0.1.1（修正版）做好了、測試都過了，推到工作分支，**還沒發布**（還沒推 `main`）：家長模式的時間和背景的時間不算玩的時間、離開畫面停止念題目、念慢一點時等念完才換下一題、寫寫看多點一下不出錯、家裡找找過午夜、跳站跳回來、關掉的站不出題、免費版至少留一站。內容在 `CHANGELOG.md`；新的測試在 `test/screens_test.dart`。
+- 0.1.1 已發布（2026-11-15）：Releases 有三個 APK，App 和 Release 都成功（0.1.0 同一天發布；第一次 Secrets 密碼貼錯，重貼後才成功）。修的問題：家長模式的時間和背景的時間不算玩的時間、離開畫面停止念題目、念慢一點時等念完才換下一題、寫寫看多點一下不出錯、家裡找找過午夜、跳站跳回來、關掉的站不出題、免費版至少留一站。內容在 `CHANGELOG.md`；新的測試在 `test/screens_test.dart`。
 - 還沒在真手機上試：**第一件事是用家長模式的「語音試聽」把 37 個同音字聽一遍**（ㄥ 先用「鞥」），念不好的換字（`app/lib/core/voice.dart`）；聲音也還沒用耳朵聽過。筆順有 15 個還沒對照教育部手冊（`docs/bopomofo.md`）。
