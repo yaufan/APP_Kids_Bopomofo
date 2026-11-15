@@ -58,6 +58,15 @@
 - 完整流程和截圖：`flutter test test/flow_test.dart`，截圖在 `app/build/screenshots/`。
 - 示範影片（每一版都要給使用者）：在 `app/` 裡 `flutter test test/demo/demo_video_test.dart --dart-define=DEMO=true`（約 5～10 分鐘，要 ffmpeg），再在專案根目錄 `python3 tools/demo_audio.py` 把背景音樂和音效混進去。輸出 `app/build/demo/demo.mp4`；`chapters.txt` 是每一段開始的格數（每秒 10 格），用來剪新功能的片段。
 
+## 程式在哪裡
+- `design/bopomofo.py`：37 個符號（兩種順序的七站、聲母韻母、例詞、大火車的形狀小故事、家裡找找的提示）、92 個有圖的詞（不標聲調的注音、在家找得到嗎）、每個符號的筆順，寫成 `app/assets/bopomofo.json`；`preview` 把筆順疊在字型上畫出來。說明和**還沒對照教育部手冊確認的筆順**在 `docs/bopomofo.md`。
+- `app/lib/core/`：`book.dart`（讀 json：符號、詞的開頭和尾巴、押韻、很像的音）、`voice.dart`（**同音國字表**，`speakable()` 把符號換成國字，語音永遠拿不到符號）、`lines.dart`（「ㄅ，爸爸。」「ㄠ，貓，ㄇ、ㄠ，貓。」）、`quiz.dart`（聽聽找找和押韻接龍的出題規則）、`game.dart`（設定、每個符號的進度、哪一站走完、今天的任務、休息）、`writing.dart`（字母寵物的描字引擎，小路寬 20）、存檔、聲音、providers。
+- `app/lib/app/`：router 和休息時間（`app.dart`）、火車（`train.dart`：車廂、火車頭、轉的輪子和煙）、共用元件（`widgets.dart`）、文字（`strings.dart`）、`map_layout.dart`（`design/art/mapart.py` 產生的車站位置）。
+- `app/lib/features/`：選司機（`driver`）、火車站和地圖（`home`）、認符號（`see`）、聽聽找找（`listen`）、寫寫看（`write`）、押韻接龍（`rhyme`）、家裡找找（`find`）、休息（`rest`）、家長關卡和家長模式（`parent`）；`common.dart` 是每輪結束的按鈕和下面那排小車廂。
+- 圖：`design/art/`（`kit.py` 軟膠公仔畫法、`train.py`、`mapart.py`、`words.py`、`ui.py`、`icon.py`；`build.py all` 產生和檢查，`fluttercheck` 用真的 flutter_svg 比對）；約定在 `docs/art.md`。聲音：`design/sounds/make_sounds.py`（README 有每個檔案）。
+- 測試：`rules_test`、`strokes_test`、`art_test`、`safety_test`、`version_test`、`flow_test`（手機和平板走完全部玩法，截圖在 `app/build/screenshots/`）、`demo/demo_video_test.dart`（`--dart-define=DEMO=true`，再 `python3 tools/demo_audio.py`）。
+
 ## 目前的狀態（2026-11-15）
-- 設計定案（`docs/design.md` 最後「已經決定的事」），0.1 開發中。
-- GitHub 專案使用者還沒建；先在本機的 `claude/relaxed-albattani-6mbwpz` 分支 commit，建好後再推。
+- 0.1.0 做好了（本機的 `claude/relaxed-albattani-6mbwpz` 分支）：火車站和地圖、七站 37 個符號、認符號、聽聽找找、寫寫看（看、點、描）、押韻接龍（開頭、押韻）、家裡找找、休息、家長模式（含語音試聽）、音樂和音效、APP 圖示。工作流程、CHANGELOG、README 下載段和 `docs/download-qr.png` 都準備好了。
+- GitHub 專案使用者還沒建；建好後推分支，再照 release skill 問能不能推 main（第一次發布前要先在專案加 Secrets）。
+- 還沒在真手機上試：**第一件事是用家長模式的「語音試聽」把 37 個同音字聽一遍**（ㄥ 先用「鞥」），念不好的換字（`app/lib/core/voice.dart`）；聲音也還沒用耳朵聽過。筆順有 15 個還沒對照教育部手冊（`docs/bopomofo.md`）。
