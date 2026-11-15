@@ -23,7 +23,7 @@ class RestScreen extends ConsumerStatefulWidget {
   ConsumerState<RestScreen> createState() => _RestScreenState();
 }
 
-class _RestScreenState extends ConsumerState<RestScreen> {
+class _RestScreenState extends ConsumerState<RestScreen> with HushOnLeave {
   late final String _sym = () {
     final b = ref.read(bookProvider);
     return ref.read(gameProvider).taskFor(b, ref.read(clockProvider)()).sym;

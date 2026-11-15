@@ -17,8 +17,9 @@ class DriverScreen extends ConsumerStatefulWidget {
   ConsumerState<DriverScreen> createState() => _DriverScreenState();
 }
 
-class _DriverScreenState extends ConsumerState<DriverScreen> {
+class _DriverScreenState extends ConsumerState<DriverScreen> with HushOnLeave {
   Driver? _picked;
+  Later? _go;
 
   @override
   void initState() {
@@ -32,11 +33,17 @@ class _DriverScreenState extends ConsumerState<DriverScreen> {
     if (_picked != null) return;
     setState(() => _picked = d);
     sfx(ref, 'whistle');
-    speak(ref, Strings.driverPicked(d));
+    final said = speak(ref, Strings.driverPicked(d));
     ref.read(gameProvider.notifier).change((g) => g.copyWith(driver: d));
-    Future<void>.delayed(const Duration(milliseconds: 1600), () {
+    _go = Later(const Duration(milliseconds: 1600), after: said, () {
       if (mounted) context.go('/');
     });
+  }
+
+  @override
+  void dispose() {
+    _go?.cancel();
+    super.dispose();
   }
 
   @override

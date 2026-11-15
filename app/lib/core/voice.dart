@@ -83,13 +83,14 @@ class SilentVoice implements Voice {
   Future<void> stop() async {}
 }
 
-/// Remembers what was said (tests).
+/// Remembers what was said, and how often it was stopped (tests).
 class RecordingVoice implements Voice {
   final said = <String>[];
+  var stops = 0;
 
   @override
   Future<void> say(String zh, {bool slow = false}) async => said.add(zh);
 
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async => stops++;
 }

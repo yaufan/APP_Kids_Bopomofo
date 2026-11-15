@@ -26,14 +26,14 @@ class SeeScreen extends ConsumerStatefulWidget {
   ConsumerState<SeeScreen> createState() => _SeeScreenState();
 }
 
-class _SeeScreenState extends ConsumerState<SeeScreen> {
+class _SeeScreenState extends ConsumerState<SeeScreen> with HushOnLeave {
   late final Bopomofo _b = ref.read(bookProvider);
   late final int _station;
   late final List<String> _row;
   late String _sym;
   int _hop = 0, _wiggle = 0, _party = 0;
   bool _done = false;
-  Timer? _panel;
+  Later? _panel;
 
   @override
   void initState() {
@@ -62,10 +62,10 @@ class _SeeScreenState extends ConsumerState<SeeScreen> {
       _hop++;
     });
     if (!first) sfx(ref, 'ding');
-    speak(ref, _line);
+    final said = speak(ref, _line);
     final game = ref.read(gameProvider.notifier);
     game.change((g) => g.saw(s));
-    if (!before && ref.read(gameProvider).seenAll(_b, _station)) _allSeen();
+    if (!before && ref.read(gameProvider).seenAll(_b, _station)) _allSeen(said);
   }
 
   void _again() {
@@ -81,9 +81,9 @@ class _SeeScreenState extends ConsumerState<SeeScreen> {
   }
 
   /// Every carriage of the station was seen: they go on the train.
-  void _allSeen() {
+  void _allSeen(Future<void> said) {
     ref.read(gameProvider.notifier).change((g) => g.did(ref.read(clockProvider)(), Module.see));
-    _panel = Timer(const Duration(milliseconds: 1800), () {
+    _panel = Later(const Duration(milliseconds: 1800), after: said, () {
       if (!mounted) return;
       setState(() {
         _done = true;

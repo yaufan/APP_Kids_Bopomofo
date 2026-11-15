@@ -67,7 +67,7 @@ class ParentScreen extends ConsumerWidget {
     const note = TextStyle(fontSize: 14, height: 1.5, color: Toy.inkSoft);
     final log = g.log(now);
     final task = g.taskFor(b, now);
-    final current = g.current(b);
+    final playing = g.playing(b);
 
     return Scaffold(
       backgroundColor: Toy.parentBg,
@@ -159,7 +159,7 @@ class ParentScreen extends ConsumerWidget {
               ChoiceChip(
                 key: ValueKey('jump-$i'),
                 label: Text(b.stations[i].name, style: const TextStyle(fontSize: 15)),
-                selected: i == current,
+                selected: i == playing,
                 onSelected: g.enabled(i)
                     ? (_) => game.change((g) => g.jump(i))
                     : null,

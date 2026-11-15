@@ -215,6 +215,71 @@ void main() {
       expect(g.current(b), 0, reason: 'the book order has its own stations');
     });
 
+    test('jumping back after jumping too far: the stations between are not skipped', () {
+      var g = const Game().jump(5);
+      expect(g.current(b), 5);
+      g = g.jump(2);
+      expect(g.current(b), 2);
+      expect(g.playing(b), 2);
+      expect(g.passed(b, 1), isTrue);
+      expect(g.passed(b, 3), isFalse, reason: 'only the stations before the jump count as passed');
+      expect(g.passed(b, 4), isFalse);
+      // The other order's jumps are left alone.
+      final t = g.withSettings(g.settings.copyWith(order: Order.textbook)).jump(3);
+      expect(t.withSettings(t.settings.copyWith(order: Order.common)).current(b), 2);
+    });
+
+    test('jumping to a station already played plays it again', () {
+      var g = const Game();
+      for (final s in [...g.row(b, 0), ...g.row(b, 1)]) {
+        g = learn(g, s);
+      }
+      g = g.rhymeRound(0).rhymeRound(1);
+      expect(g.current(b), 2);
+      expect(g.jump(0).playing(b), 0);
+    });
+
+    test('the free version always keeps a station it can play', () {
+      final free = const Settings(full: false);
+      expect(free.copyWith(stations: {2, 3, 4, 5, 6}).stations, contains(0), reason: 'stations 3 to 7 are not in the free version');
+      expect(free.copyWith(stations: {1, 2}).stations, {1, 2});
+      final g = Game(settings: const Settings().copyWith(stations: {3}).copyWith(full: false));
+      expect([for (var i = 0; i < 7; i++) if (g.enabled(i)) i], isNotEmpty);
+      expect(g.enabled(g.current(b)), isTrue);
+      expect(Settings.fromJson({'full': false, 'stations': [4, 5]}).stations, contains(0));
+    });
+
+    test('a station turned off is never in the questions of the stations after it', () {
+      for (final order in Order.values) {
+        for (final level in Level.values) {
+          final g = Game(settings: Settings(order: order, level: level, stations: const {0, 2, 3}));
+          final off = g.row(b, 1).toSet();
+          expect(g.pool(b, 3).toSet().intersection(off), isEmpty);
+          for (var seed = 0; seed < 20; seed++) {
+            for (final q in rhymeRound(b, g, 3, math.Random(seed))) {
+              if (q is HeadQuestion) expect(off.contains(q.sym), isFalse, reason: '${q.sym} is turned off');
+            }
+            for (final q in listenRound(b, g, 3, math.Random(seed))) {
+              expect(q.options.where(off.contains), isEmpty, reason: q.options.join());
+            }
+          }
+        }
+      }
+    });
+
+    test('a 家裡找找 card found after midnight is still that card; the next day gets a new one', () {
+      final night = DateTime(2026, 11, 15, 23, 58), after = DateTime(2026, 11, 16, 0, 3);
+      var g = const Game().saw('ㄚ').saw('ㄧ').saw('ㄨ').saw('ㄛ').saw('ㄜ');
+      g = g.giveTask(b, night);
+      final shown = g.task!;
+      g = g.foundFor(shown, b.symbols[shown.sym]!.hints.first);
+      expect(g.task!.day, Days.key(night));
+      expect(g.task!.found, isNotNull);
+      expect(g.taskGiven(after), isFalse, reason: 'the new day still has its own card');
+      expect(g.taskFor(b, after).found, isNull);
+      expect(g.stickers, [b.symbols[shown.sym]!.hints.first]);
+    });
+
     test('today\'s 家裡找找 card changes with the day and keeps the sticker', () {
       final day1 = DateTime(2026, 11, 15, 9), day2 = DateTime(2026, 11, 16, 9);
       var g = const Game().saw('ㄚ').saw('ㄧ').saw('ㄨ');

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -28,7 +27,7 @@ class ListenScreen extends ConsumerStatefulWidget {
   ConsumerState<ListenScreen> createState() => _ListenScreenState();
 }
 
-class _ListenScreenState extends ConsumerState<ListenScreen> {
+class _ListenScreenState extends ConsumerState<ListenScreen> with HushOnLeave {
   late final Bopomofo _b = ref.read(bookProvider);
   late final int _station;
   late List<ListenQuestion> _qs;
@@ -37,7 +36,7 @@ class _ListenScreenState extends ConsumerState<ListenScreen> {
   String? _gone;
   bool _done = false;
   int _hop = 0, _party = 0;
-  Timer? _next;
+  Later? _next;
 
   @override
   void initState() {
@@ -83,9 +82,9 @@ class _ListenScreenState extends ConsumerState<ListenScreen> {
       });
       sfx(ref, 'right');
       sfx(ref, 'clack');
-      speak(ref, q.tail ? Strings.listenRightTail(q.word.zh, sym) : Strings.listenRightHead(q.word.zh, sym));
+      final said = speak(ref, q.tail ? Strings.listenRightTail(q.word.zh, sym) : Strings.listenRightHead(q.word.zh, sym));
       ref.read(gameProvider.notifier).change((g) => g.heard(sym));
-      _next = Timer(const Duration(milliseconds: 2200), _advance);
+      _next = Later(const Duration(milliseconds: 2200), _advance, after: said);
     } else {
       setState(() => _shake[sym] = (_shake[sym] ?? 0) + 1);
       sfx(ref, 'try');

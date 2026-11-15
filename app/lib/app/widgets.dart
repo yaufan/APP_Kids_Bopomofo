@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -26,12 +27,78 @@ class Art extends StatelessWidget {
       SvgPicture.asset('assets/art/$path.svg', fit: fit, alignment: alignment, excludeFromSemantics: true, errorBuilder: (_, _, _) => const SizedBox.expand());
 }
 
+/// The screen that spoke last (its WidgetRef), so a screen going away
+/// hushes only its own line, never the next screen's first one.
+Object? _speaker;
+
 /// Says [text] out loud (if the parent left the voice on): every symbol in
 /// it is read as its character (voice.dart), slower if the parent asked.
-void speak(WidgetRef ref, String text) {
+/// Completes when the line has been said (or cut off by the next one).
+Future<void> speak(WidgetRef ref, String text) {
   final s = ref.read(gameProvider).settings;
-  if (!s.voice) return;
-  ref.read(voiceProvider).say(speakable(text), slow: s.slow);
+  if (!s.voice) return Future.value();
+  _speaker = ref;
+  return ref.read(voiceProvider).say(speakable(text), slow: s.slow);
+}
+
+/// A screen that stops its own voice when the child leaves it (home, the
+/// rest), so a question does not go on over the next screen.
+mixin HushOnLeave<T extends ConsumerStatefulWidget> on ConsumerState<T> {
+  late final Voice _hush;
+  late final Object _me;
+
+  @override
+  void initState() {
+    super.initState();
+    _hush = ref.read(voiceProvider);
+    _me = ref;
+  }
+
+  @override
+  void dispose() {
+    if (identical(_speaker, _me)) {
+      _speaker = null;
+      _hush.stop();
+    }
+    super.dispose();
+  }
+}
+
+/// Runs [then] after [min], and not before the line [after] has been said
+/// (at most [atMost] of waiting for it), so a slow voice is not cut off by
+/// the next line; [cancel] stops it.
+class Later {
+  Later(Duration min, VoidCallback then, {Future<void>? after, Duration atMost = const Duration(seconds: 10)}) : _then = then {
+    _timer = Timer(min, () {
+      _timeUp = true;
+      _fire();
+    });
+    if (after == null) {
+      _heard = true;
+    } else {
+      after.timeout(atMost).then((_) => _hear(), onError: (_) => _hear());
+    }
+  }
+
+  final VoidCallback _then;
+  late final Timer _timer;
+  var _timeUp = false, _heard = false, _over = false;
+
+  void _hear() {
+    _heard = true;
+    _fire();
+  }
+
+  void _fire() {
+    if (_over || !_timeUp || !_heard) return;
+    _over = true;
+    _then();
+  }
+
+  void cancel() {
+    _over = true;
+    _timer.cancel();
+  }
 }
 
 void sfx(WidgetRef ref, String name) => ref.read(soundsProvider).play(name);

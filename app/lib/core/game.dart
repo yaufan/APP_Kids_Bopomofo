@@ -89,17 +89,21 @@ class Settings {
 
   bool unlocked(int station) => full || station < freeStations;
 
-  /// Stations a parent turned off are skipped; at least one is always on.
-  static Set<int> tidy(Set<int> s) {
+  /// Stations a parent turned off are skipped; at least one that can be
+  /// played is always on (in the free version, one of the first two: with
+  /// only full-version stations left on, nothing would be on at all and the
+  /// train would go back to a station the parent turned off).
+  static Set<int> tidy(Set<int> s, {bool full = true}) {
     final out = {for (final i in s) if (i >= 0 && i < stationCount) i};
-    return out.isEmpty ? {0} : out;
+    if (!out.any((i) => full || i < freeStations)) out.add(0);
+    return out;
   }
 
   Settings copyWith({Level? level, int? minutes, Order? order, Set<int>? stations, bool? slow, bool? twice, bool? leftHanded, bool? music, bool? sounds, bool? voice, bool? full}) => Settings(
         level: level ?? this.level,
         minutes: minutes ?? this.minutes,
         order: order ?? this.order,
-        stations: stations == null ? this.stations : tidy(stations),
+        stations: tidy(stations ?? this.stations, full: full ?? this.full),
         slow: slow ?? this.slow,
         twice: twice ?? this.twice,
         leftHanded: leftHanded ?? this.leftHanded,
@@ -126,18 +130,19 @@ class Settings {
   factory Settings.fromJson(Map<String, dynamic> j) {
     final m = j['minutes'], st = j['stations'];
     bool flag(String k, bool d) => j[k] is bool ? j[k] as bool : d;
+    final full = flag('full', true);
     return Settings(
       level: Level.values.asNameMap()[j['level']] ?? Level.small,
       minutes: m is int && minuteChoices.contains(m) ? m : 15,
       order: Order.values.asNameMap()[j['order']] ?? Order.common,
-      stations: st is List ? tidy({for (final i in st) if (i is int) i}) : const {0, 1, 2, 3, 4, 5, 6},
+      stations: st is List ? tidy({for (final i in st) if (i is int) i}, full: full) : const {0, 1, 2, 3, 4, 5, 6},
       slow: flag('slow', false),
       twice: flag('twice', false),
       leftHanded: flag('leftHanded', false),
       music: flag('music', true),
       sounds: flag('sounds', true),
       voice: flag('voice', true),
-      full: flag('full', true),
+      full: full,
     );
   }
 }
@@ -330,8 +335,12 @@ class Game {
   /// Whether every turned-on station is passed (環島完成).
   bool finished(Bopomofo b) => [for (var i = 0; i < Settings.stationCount; i++) if (enabled(i)) i].every((i) => passed(b, i));
 
-  /// The symbols of the stations up to [station], for mixing into questions.
-  List<String> pool(Bopomofo b, int station) => [for (var i = 0; i <= station; i++) ...row(b, i)];
+  /// The symbols of the stations up to [station], for mixing into questions;
+  /// stations a parent turned off are left out.
+  List<String> pool(Bopomofo b, int station) => [
+        for (var i = 0; i <= station; i++)
+          if (i == station || enabled(i)) ...row(b, i),
+      ];
 
   // ---- changes
 
@@ -386,10 +395,17 @@ class Game {
   /// One 押韻接龍 question answered ([firstTry]: right the first time).
   Game rhymeAnswer(bool firstTry) => copyWith(rhymeAsked: rhymeAsked + 1, rhymeRight: rhymeRight + (firstTry ? 1 : 0));
 
-  /// Parent mode's 「直接跳到這一站」: the stations before it count as passed.
+  /// Parent mode's 「直接跳到這一站」: the stations before it count as passed,
+  /// and the ones from it on no longer do (unless really played), so a jump
+  /// back after jumping too far does not leave the stations between skipped.
+  /// The train plays there, even when the station was already played.
   Game jump(int station) => copyWith(
-        skipped: {...skipped, for (var i = 0; i < station; i++) key(settings.order, i)}..remove(key(settings.order, station)),
-        clearAt: true,
+        skipped: {
+          for (final k in skipped)
+            if (!k.startsWith('${settings.order.name}:')) k,
+          for (var i = 0; i < station; i++) key(settings.order, i),
+        },
+        at: station,
       );
 
   /// The child tapped a station on the map.
@@ -427,10 +443,13 @@ class Game {
   Game giveTask(Bopomofo b, DateTime now) => taskGiven(now) ? this : copyWith(task: taskFor(b, now));
 
   /// Found it: the sticker goes on the locomotive.
-  Game found(Bopomofo b, DateTime now, String wordId) {
-    final t = taskFor(b, now);
+  Game found(Bopomofo b, DateTime now, String wordId) => foundFor(taskFor(b, now), wordId);
+
+  /// Found the things of card [shown] (the one on screen, even if midnight
+  /// has passed since it was given: tomorrow's card stays new).
+  Game foundFor(HomeTask shown, String wordId) {
     final list = [...stickers, wordId];
-    return copyWith(task: HomeTask(t.day, t.sym, found: wordId), stickers: list.skip(math.max(0, list.length - maxStickers)).toList());
+    return copyWith(task: HomeTask(shown.day, shown.sym, found: wordId), stickers: list.skip(math.max(0, list.length - maxStickers)).toList());
   }
 
   // ---- today (parent mode)

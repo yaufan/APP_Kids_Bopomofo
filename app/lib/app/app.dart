@@ -82,7 +82,8 @@ class TrainApp extends ConsumerWidget {
 /// sitting has gone on for the minutes they set, the train pulls into the
 /// station and the child is sent to find things at home; an hour later (or
 /// when a parent says so) play can go on. Away from the app for ten minutes
-/// counts as a rest. It also counts today's minutes for parent mode.
+/// counts as a rest; time in parent mode is not the child's play time. It
+/// also counts today's minutes for parent mode.
 class RestGuard extends ConsumerStatefulWidget {
   const RestGuard({super.key, required this.child});
 
@@ -102,6 +103,9 @@ class _RestGuardState extends ConsumerState<RestGuard> {
   Timer? _timer;
   AppLifecycleListener? _life;
   DateTime? _away;
+
+  /// When parent mode was opened (its time is given back to the child).
+  DateTime? _parentSince;
   var _unsaved = 0;
 
   @override
@@ -143,12 +147,21 @@ class _RestGuardState extends ConsumerState<RestGuard> {
     final g = ref.read(gameProvider);
     final router = ref.read(routerProvider);
     final path = router.state.matchedLocation;
-    final playing = !path.startsWith('/parent') && path != '/rest' && path != '/driver';
+    // Not while the app is out of sight (its timer can go on in the background).
+    final playing = _away == null && !path.startsWith('/parent') && path != '/rest' && path != '/driver';
     if (playing) {
       _unsaved += RestGuard.check.inSeconds;
       if (_unsaved >= RestGuard.saveEvery) _save();
     }
-    if (path.startsWith('/parent')) return;
+    if (path.startsWith('/parent')) {
+      _parentSince ??= now;
+      return;
+    }
+    final parentSince = _parentSince;
+    if (parentSince != null) {
+      _parentSince = null;
+      ref.read(sessionStartProvider.notifier).pause(now.difference(parentSince));
+    }
     if (g.restSince != null) {
       if (g.resting(now)) {
         if (path != '/rest') router.go('/rest');

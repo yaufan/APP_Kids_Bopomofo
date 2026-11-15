@@ -30,7 +30,7 @@ class WriteScreen extends ConsumerStatefulWidget {
   ConsumerState<WriteScreen> createState() => _WriteScreenState();
 }
 
-class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProviderStateMixin {
+class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProviderStateMixin, HushOnLeave {
   late final Bopomofo _b = ref.read(bookProvider);
   late final Ticker _ticker;
   final _clock = ValueNotifier<double>(0);
@@ -50,7 +50,10 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
   double _lastNudge = -10;
   Size _page = Size.zero;
   int? _pointer;
-  Timer? _next;
+  Later? _next;
+
+  /// The last thing said (the next step waits for it to be heard out).
+  Future<void> _said = Future.value();
   late final Sounds _sounds = ref.read(soundsProvider);
 
   @override
@@ -64,7 +67,7 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
     _ticker = createTicker((e) {
       _clock.value = e.inMicroseconds / 1e6;
       if (_step == WriteStep.watch && !_finished && _watched >= _strokes.length + .3 && _next == null) {
-        _next = Timer(const Duration(milliseconds: 700), () => _go(WriteStep.tap));
+        _next = Later(const Duration(milliseconds: 700), after: _said, () => _go(WriteStep.tap));
       }
     })
       ..start();
@@ -101,13 +104,16 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
       }
     });
     final line = switch (step) {
-      WriteStep.watch => '${first ? symbolLine(_b, _sym) : ''}${Strings.watch(_sym)}',
+      WriteStep.watch => '${first ? _symbolLine(_sym) : ''}${Strings.watch(_sym)}',
       WriteStep.tap => Strings.tapStars,
       WriteStep.trace => Strings.traceRoad,
     };
     _bubble(step == WriteStep.watch ? Strings.watch(_sym) : line);
-    speak(ref, line);
+    _said = speak(ref, line);
   }
+
+  /// 「ㄅ，爸爸。」, the word twice if the parent asked.
+  String _symbolLine(String sym) => symbolLine(_b, sym, twice: ref.read(gameProvider).settings.twice);
 
   void _bubble(String s) => setState(() => _say = s);
 
@@ -130,10 +136,12 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
       case WriteStep.watch:
         break;
       case WriteStep.tap:
+        // Every star is lit already: the page is about to move on to 描.
+        if (_tapped >= _strokes.length) return;
         if ((p - _strokes[_tapped].first).distance < 22) {
           _sounds.play('star');
           setState(() => _tapped++);
-          if (_tapped == _strokes.length) _next = Timer(const Duration(milliseconds: 600), () => _go(WriteStep.trace));
+          if (_tapped == _strokes.length) _next = Later(const Duration(milliseconds: 600), () => _go(WriteStep.trace));
         } else {
           _nudge(Strings.startAtStar);
         }
@@ -179,14 +187,14 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
     final sym = _sym;
     final game = ref.read(gameProvider.notifier);
     game.change((g) => g.traced(sym));
-    final line = Strings.traced(symbolLine(_b, sym));
+    final line = Strings.traced(_symbolLine(sym));
     _bubble(Strings.traced(''));
-    speak(ref, line);
+    final said = _said = speak(ref, line);
     setState(() => _party++);
     final g = ref.read(gameProvider);
     if (g.tracedAll(_b, _station)) {
       game.change((g) => g.did(ref.read(clockProvider)(), Module.write));
-      _next = Timer(const Duration(milliseconds: 2400), () {
+      _next = Later(const Duration(milliseconds: 2400), after: said, () {
         if (!mounted) return;
         setState(() => _done = true);
         speak(ref, Strings.writeDone);
@@ -194,7 +202,7 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
       return;
     }
     final nextSym = _row.firstWhere((s) => !g.of(s).traced, orElse: () => _row.first);
-    _next = Timer(const Duration(milliseconds: 2600), () {
+    _next = Later(const Duration(milliseconds: 2600), after: said, () {
       if (!mounted) return;
       setState(() => _sym = nextSym);
       _go(WriteStep.watch, first: true);
@@ -216,7 +224,7 @@ class _WriteScreenState extends ConsumerState<WriteScreen> with SingleTickerProv
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 620),
                   child: Column(children: [
-                    TopBar(title: Module.write.zh, onHome: () => context.go('/'), station: st, onSpeak: () => speak(ref, symbolLine(_b, _sym))),
+                    TopBar(title: Module.write.zh, onHome: () => context.go('/'), station: st, onSpeak: () => speak(ref, _symbolLine(_sym))),
                     Padding(
                       padding: const EdgeInsets.only(top: 6, bottom: 4),
                       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [

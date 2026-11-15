@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -26,7 +25,7 @@ class RhymeScreen extends ConsumerStatefulWidget {
   ConsumerState<RhymeScreen> createState() => _RhymeScreenState();
 }
 
-class _RhymeScreenState extends ConsumerState<RhymeScreen> {
+class _RhymeScreenState extends ConsumerState<RhymeScreen> with HushOnLeave {
   late final Bopomofo _b = ref.read(bookProvider);
   late final int _station;
   late List<RhymeQuestion> _qs;
@@ -37,7 +36,7 @@ class _RhymeScreenState extends ConsumerState<RhymeScreen> {
   final _won = <Word>[];
   int _party = 0;
   String _said = '';
-  Timer? _next;
+  Later? _next;
 
   @override
   void initState() {
@@ -112,8 +111,8 @@ class _RhymeScreenState extends ConsumerState<RhymeScreen> {
     });
     sfx(ref, 'right');
     sfx(ref, 'couple');
-    speak(ref, line);
-    _next = Timer(const Duration(milliseconds: 2600), _advance);
+    final said = speak(ref, line);
+    _next = Later(const Duration(milliseconds: 2600), _advance, after: said);
   }
 
   void _wrong(List<Word> words, String line) {

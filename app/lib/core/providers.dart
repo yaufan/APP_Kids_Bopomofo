@@ -48,6 +48,14 @@ class SessionStart extends Notifier<DateTime> {
   DateTime build() => ref.read(clockProvider)();
 
   void restart() => state = ref.read(clockProvider)();
+
+  /// Time [d] a parent spent in parent mode is not the child's: the sitting
+  /// starts that much later (never later than now).
+  void pause(Duration d) {
+    if (d.isNegative) return;
+    final now = ref.read(clockProvider)(), later = state.add(d);
+    state = later.isAfter(now) ? now : later;
+  }
 }
 
 /// Things said only once per app start (the welcome, 大火車's first how-to).

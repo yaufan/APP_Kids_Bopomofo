@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,11 +21,16 @@ class FindScreen extends ConsumerStatefulWidget {
   ConsumerState<FindScreen> createState() => _FindScreenState();
 }
 
-class _FindScreenState extends ConsumerState<FindScreen> {
+class _FindScreenState extends ConsumerState<FindScreen> with HushOnLeave {
   late final Bopomofo _b = ref.read(bookProvider);
   bool _choosing = false;
   int _party = 0;
-  Timer? _home;
+  Later? _home;
+
+  /// The card on screen: the one given when the page opened, kept even if
+  /// midnight passes while the child is off looking (so 找到了 marks this
+  /// card, and tomorrow's is still new).
+  late HomeTask _task = ref.read(gameProvider).taskFor(_b, ref.read(clockProvider)());
 
   @override
   void initState() {
@@ -35,7 +39,7 @@ class _FindScreenState extends ConsumerState<FindScreen> {
       if (!mounted) return;
       final now = ref.read(clockProvider)();
       ref.read(gameProvider.notifier).change((g) => g.giveTask(_b, now).did(now, Module.find));
-      final t = ref.read(gameProvider).taskFor(_b, ref.read(clockProvider)());
+      final t = _task = ref.read(gameProvider).taskFor(_b, now);
       speak(ref, t.found != null ? Strings.foundToday : '${Strings.findHello}${_line(t.sym)}');
     });
   }
@@ -55,16 +59,17 @@ class _FindScreenState extends ConsumerState<FindScreen> {
   }
 
   void _sticker(Word w) {
-    final now = ref.read(clockProvider)();
-    ref.read(gameProvider.notifier).change((g) => g.found(_b, now, w.id));
+    if (_task.found != null) return;
+    ref.read(gameProvider.notifier).change((g) => g.foundFor(_task, w.id));
+    _task = HomeTask(_task.day, _task.sym, found: w.id);
     sfx(ref, 'sticker');
     sfx(ref, 'whistle');
-    speak(ref, Strings.stickerOn);
+    final said = speak(ref, Strings.stickerOn);
     setState(() {
       _choosing = false;
       _party++;
     });
-    _home = Timer(const Duration(milliseconds: 2600), () {
+    _home = Later(const Duration(milliseconds: 2600), after: said, () {
       if (mounted) context.go('/');
     });
   }
@@ -72,8 +77,7 @@ class _FindScreenState extends ConsumerState<FindScreen> {
   @override
   Widget build(BuildContext context) {
     final g = ref.watch(gameProvider);
-    final now = ref.read(clockProvider)();
-    final t = g.taskFor(_b, now);
+    final t = _task;
     final z = _b.symbols[t.sym]!;
     final hints = [for (final h in z.hints.take(3)) _b.words[h]!];
     final st = _b.stations[_b.stationOf(t.sym, g.settings.order)];

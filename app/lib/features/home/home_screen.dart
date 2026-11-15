@@ -25,7 +25,7 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProviderStateMixin, HushOnLeave {
   late final _drive = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
   int _from = 0, _to = 0;
   int _toot = 0;
